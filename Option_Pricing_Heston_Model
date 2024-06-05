@@ -1,0 +1,158 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": [],
+      "authorship_tag": "ABX9TyNRDOX+4saFlMw7WnI+QquF",
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/aprajeeta10/python-projects/blob/main/Option_Pricing_Heston_Model\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "**Step 1: Import libraries**"
+      ],
+      "metadata": {
+        "id": "imUwdVsbQz8k"
+      }
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "dCzQBzVLQp7E"
+      },
+      "outputs": [],
+      "source": [
+        "import numpy as np\n",
+        "from scipy.integrate import quad"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "**Step 2: Define model parameters**"
+      ],
+      "metadata": {
+        "id": "WlxrbjXWQ6TR"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Model parameters\n",
+        "S0 = 100.0    # Initial stock price\n",
+        "K = 100.0     # Strike price\n",
+        "r = 0.05      # Risk-free rate\n",
+        "T = 1.0       # Time to maturity\n",
+        "kappa = 2.0   # Mean reversion rate\n",
+        "theta = 0.05  # Long-term average volatility\n",
+        "sigma = 0.3   # Volatility of volatility\n",
+        "rho = -0.5    # Correlation coefficient\n",
+        "v0 = 0.05     # Initial volatility"
+      ],
+      "metadata": {
+        "id": "21YcfmPGQthK"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "**Step 3: Define functions**"
+      ],
+      "metadata": {
+        "id": "CjaAG6JhQ_io"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Define characteristic functions\n",
+        "def heston_characteristic_function(u, S0, K, r, T, kappa, theta, sigma, rho, v0):\n",
+        "   xi = kappa - rho * sigma * 1j * u\n",
+        "   d = np.sqrt((rho * sigma * 1j * u - xi)**2 - sigma**2 * (-u * 1j - u**2))\n",
+        "   g = (xi - rho * sigma * 1j * u - d) / (xi - rho * sigma * 1j * u + d)\n",
+        "   C = r * 1j * u * T + (kappa * theta) / sigma**2 * ((xi - rho * sigma * 1j * u - d) * T - 2 * np.log((1 - g * np.exp(-d * T)) / (1 - g)))\n",
+        "   D = (xi - rho * sigma * 1j * u - d) / sigma**2 * ((1 - np.exp(-d * T)) / (1 - g * np.exp(-d * T)))\n",
+        "   return np.exp(C + D * v0 + 1j * u * np.log(S0))\n",
+        "\n",
+        "# Define functions to compute call and put options prices\n",
+        "def heston_call_price(S0, K, r, T, kappa, theta, sigma, rho, v0):\n",
+        "   integrand = lambda u: np.real(np.exp(-1j * u * np.log(K)) / (1j * u) * heston_characteristic_function(u - 1j, S0, K, r, T, kappa, theta, sigma, rho, v0))\n",
+        "   integral, _ = quad(integrand, 0, np.inf)\n",
+        "   return np.exp(-r * T) * 0.5 * S0 - np.exp(-r * T) / np.pi * integral\n",
+        "\n",
+        "\n",
+        "def heston_put_price(S0, K, r, T, kappa, theta, sigma, rho, v0):\n",
+        "   integrand = lambda u: np.real(np.exp(-1j * u * np.log(K)) / (1j * u) * heston_characteristic_function(u - 1j, S0, K, r, T, kappa, theta, sigma, rho, v0))\n",
+        "   integral, _ = quad(integrand, 0, np.inf)\n",
+        "   return np.exp(-r * T) / np.pi * integral - S0 + K * np.exp(-r * T)"
+      ],
+      "metadata": {
+        "id": "hYpujJ2bRFrE"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "**Step 4: Calculate the call and put option prices**"
+      ],
+      "metadata": {
+        "id": "uuexcAkBRL7H"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Calculate call and put option prices\n",
+        "call_price = heston_call_price(S0, K, r, T, kappa, theta, sigma, rho, v0)\n",
+        "put_price = heston_put_price(S0, K, r, T, kappa, theta, sigma, rho, v0)\n",
+        "\n",
+        "\n",
+        "print(\"European Call Option Price:\", np.round(call_price, 2))\n",
+        "print(\"European Put Option Price:\", np.round(put_price, 2))"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "XFQpD_s-RQIX",
+        "outputId": "3dc38305-b0cb-49f9-91de-95a93170cc6f"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "European Call Option Price: 27.63\n",
+            "European Put Option Price: 15.06\n"
+          ]
+        }
+      ]
+    }
+  ]
+}
